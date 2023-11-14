@@ -295,6 +295,7 @@ class DDPOTrainer(BaseTrainer):
             data_steps = self.config.train.num_samples_per_epoch // self.config.train.sample_batch_size // self.world_size
             self.accelerator.print("Sampling...")
             for i, prompts in enumerate(tqdm(dataloader, total = data_steps, disable=not self.accelerator.is_main_process)):            
+                print("Step:", i)
                 if i >= data_steps:
                     break
 
@@ -305,6 +306,7 @@ class DDPOTrainer(BaseTrainer):
                 log_probs.append(batch_log_probs)
                 all_prompts.append(prompts)
 
+            print("Waiting...")
             # Get rewards from experiences
             self.accelerator.wait_for_everyone()
             unwrapped_model = self.accelerator.unwrap_model(self.model)
