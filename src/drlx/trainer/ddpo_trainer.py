@@ -359,7 +359,9 @@ class DDPOTrainer(BaseTrainer):
                     disable=not self.accelerator.is_main_process,
                 )
             ):
-                print("Step:", i)
+                print("Sampling...")
+                print()
+                
                 if i >= data_steps:
                     break
 

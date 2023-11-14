@@ -1,9 +1,10 @@
-import torch
+# Trains a model on the PickScore reward model
+# Trained on human preference data from PickAPic
+
 from drlx.trainer.ddpo_trainer import DDPOTrainer
 from drlx.configs import DRLXConfig
-from drlx.pipeline.pickapic_prompts import PickAPicPrompts, PickAPicReplacementPrompts
+from drlx.pipeline.pickapic_prompts import PickAPicPrompts
 from drlx.reward_modelling.pickscore import PickScoreModel
-from drlx.reward_modelling.aesthetics import Aesthetics
 from drlx.utils import get_latest_checkpoint
 
 pipe = PickAPicPrompts()
