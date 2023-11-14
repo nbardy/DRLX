@@ -2,7 +2,7 @@ method:
   name : "DDPO"
 
 model:
-  model_path: "stabilityai/stable-diffusion-2-1-base"
+  model_path: "stabilityai/stable-diffusion-xl-base-1.0"
   model_arch_type: "LDMUnet"
   attention_slicing: True
   xformers_memory_efficient: True
@@ -27,7 +27,7 @@ scheduler:
   
 logging:
   run_name: 'ddpo_sd_pickapic_pickscore'
-  wandb_project: 'DRLX'
+  wandb_project: 'reward_modeling_sdxl'
 
 train:
   num_epochs: 450

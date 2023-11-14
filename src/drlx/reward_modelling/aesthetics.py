@@ -1,51 +1,39 @@
-from drlx.reward_modelling.aesthetics import Aesthetics
-from drlx.pipeline.pickapic_prompts import PickAPicPrompts
-from drlx.trainer.ddpo_trainer import DDPOTrainer
-from drlx.configs import DRLXConfig
-
-# We import a reward model, a prompt pipeline, the trainer and config
-
-pipe = PickAPicPrompts()
-config = DRLXConfig.load_yaml("configs/my_cfg.yml")
-trainer = DDPOTrainer(config)
-
-trainer.train(pipe, Aesthetics())from typing import Iterable
-
+from typing import Iterable
+import os
+import requests
+import numpy as np
 import torch
 from torch import nn
-import numpy as np
-import requests
-import os
-import clip
 from PIL import Image
+import clip
 
 from drlx.reward_modelling import RewardModel
 
+
 class MLP(nn.Module):
-    def __init__(self, input_size, xcol='emb', ycol='avg_rating'):
+    def __init__(self, input_size, xcol="emb", ycol="avg_rating"):
         super().__init__()
         self.input_size = input_size
         self.xcol = xcol
         self.ycol = ycol
         self.layers = nn.Sequential(
             nn.Linear(self.input_size, 1024),
-            #nn.ReLU(),
+            # nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(1024, 128),
-            #nn.ReLU(),
+            # nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(128, 64),
-            #nn.ReLU(),
+            # nn.ReLU(),
             nn.Dropout(0.1),
-
             nn.Linear(64, 16),
-            #nn.ReLU(),
-
-            nn.Linear(16, 1)
+            # nn.ReLU(),
+            nn.Linear(16, 1),
         )
 
     def forward(self, x):
         return self.layers(x)
+
 
 def load_aesthetic_model_weights(cache="."):
     """
@@ -70,6 +58,7 @@ def load_aesthetic_model_weights(cache="."):
     weights = torch.load(loadpath, map_location=torch.device("cpu"))
     return weights
 
+
 def aesthetic_model_normalize(a, axis=-1, order=2):
     """
     Normalize output from aesthetics model
@@ -78,12 +67,15 @@ def aesthetic_model_normalize(a, axis=-1, order=2):
     l2[l2 == 0] = 1
     return a / np.expand_dims(l2, axis)
 
-def aesthetic_scoring(imgs, preprocess, clip_model, aesthetic_model):    
+
+def aesthetic_scoring(imgs, preprocess, clip_model, aesthetic_model):
     imgs = torch.stack([preprocess(Image.fromarray(img)).cuda() for img in imgs])
-    with torch.no_grad(): image_features = clip_model.encode_image(imgs)
+    with torch.no_grad():
+        image_features = clip_model.encode_image(imgs)
     im_emb_arr = aesthetic_model_normalize(image_features.cpu().detach().numpy())
     prediction = aesthetic_model(torch.from_numpy(im_emb_arr).float().cuda())
     return prediction
+
 
 class Aesthetics(RewardModel):
     """
@@ -92,51 +84,18 @@ class Aesthetics(RewardModel):
     :param device: Device to load model on
     :type device: torch.device
     """
-    def __init__(self, device = None):
+
+    def __init__(self, device=None):
         super().__init__()
         self.model = MLP(768)
         self.model.load_state_dict(load_aesthetic_model_weights())
-        self.clip_model, self.preprocess = clip.load("ViT-L/14", device=device if device is not None else 'cpu')
+        self.clip_model, self.preprocess = clip.load(
+            "ViT-L/14", device=device if device is not None else "cpu"
+        )
 
         if device is not None:
             self.model.to(device)
 
-    def forward(self, images : np.ndarray, prompts : Iterable[str]):
-        return aesthetic_scoring(
-            images,
-            self.preprocess,
-            self.clip_model,
-            self.model
-        )
+    def forward(self, images: np.ndarray, prompts: Iterable[str]):
+        return aesthetic_scoring(images, self.preprocess, self.clip_model, self.model)
 
-
-from typing import Iterable
-import torch
-import numpy as np
-
-class MaskedLuminance(RewardModel):
-    def __init__(self, tolerance: float, device=None):
-        super().__init__()
-        self.tolerance = tolerance
-        if device is not None:
-            self.device = device
-        else:
-            self.device = torch.device("cpu")
-
-    def calculate_luminance(self, image: np.ndarray):
-        R, G, B = image[:, :, 0], image[:, :, 1], image[:, :, 2]
-        luminance = 0.299 * R + 0.587 * G + 0.114 * B
-        return luminance
-
-    def compute_masked_luminance_score(self, luminance: np.ndarray, luminance_feature: np.ndarray, mask: np.ndarray):
-        diff = np.abs(luminance - luminance_feature)
-        score = np.sum((diff <= self.tolerance) * mask)
-        return score
-
-    def forward(self, images: np.ndarray, luminance_features: np.ndarray, masks: np.ndarray):
-        scores = []
-        for image, luminance_feature, mask in zip(images, luminance_features, masks):
-            luminance = self.calculate_luminance(image)
-            score = self.compute_masked_luminance_score(luminance, luminance_feature, mask)
-            scores.append(score)
-        return np.array(scores)

@@ -6,7 +6,7 @@ from drlx.configs import DRLXConfig
 # We import a reward model, a prompt pipeline, the trainer and config
 
 pipe = PickAPicPrompts()
-config = DRLXConfig.load_yaml("configs/my_cfg.yml")
+config = DRLXConfig.load_yaml("configs/ddpo_sd_pickapic_linux.yml")
 trainer = DDPOTrainer(config)
 
 trainer.train(pipe, Aesthetics())

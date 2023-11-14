@@ -1,34 +1,45 @@
 
 from typing import Iterable
-import torch
 import numpy as np
-from torch import nn
-from PIL import Image
 
 from drlx.reward_modelling import RewardModel
-class MaskedLuminance(RewardModel):
-    def __init__(self, tolerance: float, device=None):
+
+from .aesthetics import Aesthetics
+from .prompts import  StylePromptReward, PromptFunctionReward
+from prompt_sets import simple_sharp_realistic_prompts, generic_hq_photography_keywords, random_cinematic_prompt
+
+# Combines the photorealism and aesthetics reward models
+class MutliRewardModel(RewardModel):
+    def __init__(self, device=None):
         super().__init__()
-        self.tolerance = tolerance
-        if device is not None:
-            self.device = device
-        else:
-            self.device = torch.device("cpu")
+        self.aesthetic_model = Aesthetics(device=device)
+        self.realistic_reward = StylePromptReward(simple_sharp_realistic_prompts, device=device)
+        self.photography_reward = StylePromptReward(generic_hq_photography_keywords, device=device)
+    
+    def forward(self, 
+                images: np.ndarray, 
+                prompts: Iterable[str],
+                realistic_weight=0.6,
+                aesthetic_weight=0.3,
+                photography_weight=1.2):
 
-    def calculate_luminance(self, image: np.ndarray):
-        R, G, B = image[:, :, 0], image[:, :, 1], image[:, :, 2]
-        luminance = 0.299 * R + 0.587 * G + 0.114 * B
-        return luminance
+        aesthetic_scores = self.aesthetic_model(images, prompts)
+        realistic_scores = self.style_model(images, prompts)
 
-    def compute_masked_luminance_score(self, luminance: np.ndarray, luminance_feature: np.ndarray, mask: np.ndarray):
-        diff = np.abs(luminance - luminance_feature)
-        score = np.sum((diff <= self.tolerance) * mask)
-        return score
+        # Include the prepended prompts to prevent too much drift away from the initial target
+        # We don't want the reward model to overfit and forget the style qualitie
+        photography_scores = self.style_model(images, prompts, prepend_prompt=True)
 
-    def forward(self, images: np.ndarray, luminance_features: np.ndarray, masks: np.ndarray):
-        scores = []
-        for image, luminance_feature, mask in zip(images, luminance_features, masks):
-            luminance = self.calculate_luminance(image)
-            score = self.compute_masked_luminance_score(luminance, luminance_feature, mask)
-            scores.append(score)
-        return np.array(scores)
+        return (realistic_weight * realistic_scores +
+                aesthetic_weight * aesthetic_scores + 
+                photography_weight * photography_scores)
+    
+class CinematicReward(RewardModel):
+    def __init__(self, device=None):
+        super().__init__()
+        self.style_reward = PromptFunctionReward(random_cinematic_prompt, device=device)
+    
+    def forward(self, images: np.ndarray, prompts: Iterable[str]):
+        return self.style_reward(images, prompts)
+
+
