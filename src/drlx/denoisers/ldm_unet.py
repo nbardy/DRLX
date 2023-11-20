@@ -85,12 +85,25 @@ class LDMUNet(BaseConditionalDenoiser):
             pipe.enable_xformers_memory_efficient_attention()
 
         self.unet = pipe.unet
-        self.text_encoder = pipe.text_encoder
         self.vae = pipe.vae
         self.scale_factor = pipe.vae_scale_factor
         self.encode_prompt = pipe.encode_prompt
 
-        self.text_encoder.requires_grad_(False)
+        text_encoder = pipe.text_encoder
+        text_encoder_2 = pipe.text_encoder_2
+
+        print("models")
+        # print pipe device
+        print(f"pipe.device: {pipe.device}")
+        # print unet device
+        print(f"unet: {self.unet.device}")
+        # print device of pipe.text_encoder
+        print(f"pipe.text_encoder.device: {text_encoder.device}")
+        # print device of pipe.text_encoder_2
+        print(f"pipe.text_encoder_2.device: {text_encoder_2.device}")
+
+        text_encoder.requires_grad_(False)
+        text_encoder_2.requires_grad_(False)
         self.vae.requires_grad_(False)
 
         self.tokenizer = pipe.tokenizer
