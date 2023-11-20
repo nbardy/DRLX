@@ -199,6 +199,9 @@ cinematic_style_activator = [
 
 # Random Cinematic prompt
 # Given a base prompt, append a prompt from each cinematic category
+#
+# Template:
+# cinematic shot {base prompt} {shot type} {film type} {color grading} {cinematic effect} {cinematic genre}
 def random_cinematic_prompt(base_prompt):
     cinematic_prompt = cinematic_style_activator
     cinematic_prompt += f" {base_prompt}"
