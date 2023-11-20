@@ -176,12 +176,14 @@ class DDPOTrainer(BaseTrainer):
                 self.config.model.model_path
                 == "stabilityai/stable-diffusion-xl-base-1.0"
             ):
-                print(f"Loading model: {self.config.model.model_path} as SDXL")
+                print("Model Type: SDXL")
+                print(f"Loading model: {self.config.model.model_path}")
                 model, pipe = model.from_pretrained_pipeline(
                     StableDiffusionXLPipeline, self.config.model.model_path
                 )
             else:
-                print(f"Loading model: {self.config.model.model_path} as SDXLP")
+                print("Model Type: SD")
+                print(f"Loading model: {self.config.model.model_path}")
                 model, pipe = model.from_pretrained_pipeline(
                     StableDiffusionPipeline, self.config.model.model_path
                 )
@@ -361,7 +363,7 @@ class DDPOTrainer(BaseTrainer):
             ):
                 print("Sampling...")
                 print()
-                
+
                 if i >= data_steps:
                     break
 
